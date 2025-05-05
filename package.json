@@ -5,7 +5,9 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Running tests...\" && exit 0",
-    "start": "node server.js"
+    "start": "node server.js",
+    "start:dev": "NODE_ENV=development node server.js",
+    "start:prod": "NODE_ENV=production node server.js"
   },
   "dependencies": {
     "express": "^4.17.1"
