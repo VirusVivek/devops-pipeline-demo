@@ -5,9 +5,14 @@ pipeline {
         nodejs "nodejs14"
     }
     
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['development', 'staging', 'production'], description: 'Deployment Environment')
+    }
+    
     environment {
-        DOCKER_IMAGE = "my-nodejs-app:${BUILD_NUMBER}"
-        CONTAINER_NAME = "nodejs-app-container"
+        DOCKER_IMAGE = "my-nodejs-app:${BUILD_NUMBER}-${params.ENVIRONMENT}"
+        CONTAINER_NAME = "nodejs-app-${params.ENVIRONMENT}"
+        PORT_MAPPING = "${params.ENVIRONMENT == 'production' ? '80:3000' : '3000:3000'}"
     }
     
     stages {
@@ -31,19 +36,29 @@ pipeline {
         
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${DOCKER_IMAGE} ."
+                sh "docker build --build-arg NODE_ENV=${params.ENVIRONMENT} -t ${DOCKER_IMAGE} ."
             }
         }
         
-        stage('Deploy Docker Container') {
+        stage('Deploy to Environment') {
             steps {
                 sh '''
                 echo "Stopping any existing container..."
                 docker stop ${CONTAINER_NAME} || true
                 docker rm ${CONTAINER_NAME} || true
                 
-                echo "Starting new container..."
-                docker run -d -p 3000:3000 --name ${CONTAINER_NAME} ${DOCKER_IMAGE}
+                echo "Starting new container for ${ENVIRONMENT} environment..."
+                docker run -d -p ${PORT_MAPPING} -e NODE_ENV=${ENVIRONMENT} --name ${CONTAINER_NAME} ${DOCKER_IMAGE}
+                '''
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                sh '''
+                echo "Verifying deployment..."
+                sleep 5
+                curl -s http://localhost:${PORT_MAPPING.split(':')[0]}/health | grep "${ENVIRONMENT}"
                 '''
             }
         }
@@ -51,10 +66,10 @@ pipeline {
     
     post {
         success {
-            echo 'Pipeline completed successfully!'
+            echo "Pipeline completed successfully! Application deployed to ${params.ENVIRONMENT} environment"
         }
         failure {
-            echo 'Pipeline failed!'
+            echo "Pipeline failed! ${params.ENVIRONMENT} deployment unsuccessful"
         }
     }
 }
