@@ -2,7 +2,12 @@ pipeline {
     agent any
     
     tools {
-        nodejs "nodejs14"  // Use the name you configured in Global Tool Configuration
+        nodejs "nodejs14"
+    }
+    
+    environment {
+        DOCKER_IMAGE = "my-nodejs-app:${BUILD_NUMBER}"
+        CONTAINER_NAME = "nodejs-app-container"
     }
     
     stages {
@@ -24,18 +29,21 @@ pipeline {
             }
         }
         
-        stage('Build') {
+        stage('Build Docker Image') {
             steps {
-                sh 'echo "Build step completed"'
+                sh "docker build -t ${DOCKER_IMAGE} ."
             }
         }
         
-        stage('Deploy') {
+        stage('Deploy Docker Container') {
             steps {
                 sh '''
-                echo "Deploying application..."
-                nohup npm start > app.log 2>&1 &
-                echo "Application deployed!"
+                echo "Stopping any existing container..."
+                docker stop ${CONTAINER_NAME} || true
+                docker rm ${CONTAINER_NAME} || true
+                
+                echo "Starting new container..."
+                docker run -d -p 3000:3000 --name ${CONTAINER_NAME} ${DOCKER_IMAGE}
                 '''
             }
         }
