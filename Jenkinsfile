@@ -1,6 +1,10 @@
 pipeline {
     agent any
     
+    tools {
+        nodejs "nodejs14"  // Use the name you configured in Global Tool Configuration
+    }
+    
     stages {
         stage('Checkout') {
             steps {
@@ -30,7 +34,7 @@ pipeline {
             steps {
                 sh '''
                 echo "Deploying application..."
-                npm start &
+                nohup npm start > app.log 2>&1 &
                 echo "Application deployed!"
                 '''
             }
