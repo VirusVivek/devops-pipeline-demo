@@ -9,4 +9,7 @@ COPY . .
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+# Default to production, but can be overridden
+ENV NODE_ENV=production
+
+CMD ["npm", "start"]
